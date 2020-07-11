@@ -2,11 +2,10 @@ extern crate config;
 extern crate toml;
 
 use std::env;
-use std::fs::File;
 use std::process;
 use std::path::Path;
-use std::collections::HashMap;
 
+use jarvis::*;
 use jarvis::Command;
 
 fn main() {
@@ -16,48 +15,49 @@ fn main() {
 	process::exit(1);
     });
 
-    let mut no_conf_files = 0;
 
-    let formats = [".yml", ".json", ".toml"];
+    run (command);
+}
 
-    for format in &formats {
-	let conf_file = File::open (".jarvis".to_owned() + format);
-	let conf_file = match conf_file {
-	    Ok(_file) => {
-		no_conf_files += 1;
-		true
-	    },
-	    Err(_error) => false,
-	};
-    }
-
-    if no_conf_files == 0 {
-	println!("No config file found in current project.
-Please provide a '.jarvis.{{yml|json|toml}}' file in your project root.");
-	process::exit(1);
-
-    } else if no_conf_files > 1 {
-	println!("Too many config files found in current project.
-Please remove all '.jarvis.{{yml|json|toml}}' files but one.");
-	process::exit(1);
-    }
-
+fn run (command: Command) {
+    verify_config_files()
+	.unwrap_or_else(|err| {
+	    println!("{}", err);
+	    process::exit(1);
+	});
 
     let mut config = config::Config::default();
-    config
-	.merge (config::File::from(Path::new(".jarvis")))
+    let config =
+	config.merge (config::File::from(Path::new(".jarvis")))
 	.unwrap_or_else(|err| {
 	    println!("Error while reading config: {}", err);
 	    process::exit(1);
 	});
-    // println!("{:?}", config.cache);
 
-    run (command, config);
-}
+    let mut exec_path =
+	verify_command (command.clone(), config.clone())
+	.unwrap_or_else (|err| {
+	    println!("{}", err);
+	    process::exit(1);
+	});
 
-fn run (command: Command, config: config::Config) {
-    println!("{}", command.identifier);
-    println!("{:?}", command.args);
+    for arg in command.args {
+	exec_path = exec_path.to_owned() + format!(" \"{}\"", arg).as_str();
+    }
 
-    println!("{:?}", config.try_into::<HashMap<String, toml::Value>>().unwrap());
+    println!("Executing: {}", exec_path);
+
+    let mut child = process::Command::new("sh");
+
+    let child = child
+	.arg("-c")
+	.arg(&exec_path);
+
+    let child = child
+	.spawn()
+	.expect(format!("failed to execute {}", exec_path).as_str());
+
+    child
+	.wait_with_output()
+	.expect("failed to wait on child");
 }
