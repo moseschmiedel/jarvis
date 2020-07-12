@@ -1,6 +1,6 @@
 [package]
 name = "jarvis"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Mose Schmiedel <mose.schmiedel@web.de>"]
 edition = "2018"
 description = "A framework-agnostic task runner for the command line"
