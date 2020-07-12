@@ -8,4 +8,4 @@ edition = "2018"
 
 [dependencies]
 config = "0.9"
-toml = "0.5"
+walkdir = "2"

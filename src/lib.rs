@@ -1,5 +1,10 @@
+extern crate walkdir;
+
 use config;
-use std::fs::File;
+use std::env;
+use std::path;
+use std::ffi::OsStr;
+use walkdir::WalkDir;
 
 pub struct Command<'a> {
     pub identifier: String,
@@ -46,21 +51,32 @@ pub fn verify_command (command: Command, config: config::Config)
     Ok(exec_path.unwrap())
 }
 
-pub fn verify_config_files ()
-			    -> Result<bool, &'static str> {
+pub fn find_and_verify_config_files ()
+			    -> Result<path::PathBuf, &'static str> {
     let mut no_conf_files = 0;
 
     let formats = [".yml", ".json", ".toml"];
 
-    for format in &formats {
-	let _conf_file = File::open (".jarvis".to_owned() + format);
-	let _conf_file = match _conf_file {
-	    Ok(_file) => {
-		no_conf_files += 1;
-		true
-	    },
-	    Err(_error) => false,
-	};
+    let mut current_dir = env::current_dir().unwrap();
+
+    while no_conf_files == 0
+	&& current_dir != path::PathBuf::from("/") {
+	for entry in WalkDir::new(&(current_dir.to_string_lossy().to_string()))
+	    .max_depth(1)
+	    {
+		let entry = entry.unwrap();
+		for format in &formats {
+		    if entry.file_name()
+			== OsStr::new(&(".jarvis".to_owned() + format)) {
+			    no_conf_files += 1;
+			    current_dir.push(".jarvis".to_owned() + format);
+			}
+		}
+	    }
+
+	    if no_conf_files == 0 {
+		current_dir.pop();
+	    }
     }
     if no_conf_files == 0 {
 	return Err("No config file found in current project.
@@ -71,5 +87,5 @@ Please provide a '.jarvis.{yml|json|toml}' file in your project root.");
 Please remove all '.jarvis.{yml|json|toml}' files but one.");
     }
 
-    Ok(true)
+    Ok(current_dir)
 }

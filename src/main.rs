@@ -1,9 +1,7 @@
 extern crate config;
-extern crate toml;
 
 use std::env;
 use std::process;
-use std::path::Path;
 
 use jarvis::*;
 use jarvis::Command;
@@ -20,15 +18,16 @@ fn main() {
 }
 
 fn run (command: Command) {
-    verify_config_files()
+    let config_path = find_and_verify_config_files()
 	.unwrap_or_else(|err| {
 	    println!("{}", err);
 	    process::exit(1);
 	});
+    let config_path = config_path.as_path();
 
     let mut config = config::Config::default();
     let config =
-	config.merge (config::File::from(Path::new(".jarvis")))
+	config.merge (config::File::from(config_path))
 	.unwrap_or_else(|err| {
 	    println!("Error while reading config: {}", err);
 	    process::exit(1);
