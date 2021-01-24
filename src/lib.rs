@@ -6,6 +6,11 @@ use std::path;
 use std::ffi::OsStr;
 use walkdir::WalkDir;
 
+/// Defines a command for this application
+///
+/// Commands have an identifier, which is the first argument given to
+/// this application, and arguments (args) which are all the other commandline
+/// arguments given to this application.
 pub struct Command<'a> {
     pub identifier: String,
     pub args: &'a [String],
@@ -35,6 +40,14 @@ impl<'a> Command<'a> {
     }
 }
 
+/// Returns shell command that should be run
+///
+/// Searches for the commands subsection in the provided config and checks
+/// wether the provide command is part of the commands in the config or not.
+/// If the command exists in the config then the shell command, that is specified
+/// at the command is returned.
+/// If the search for the subsection or the command fails, respective error messages
+/// are printed.
 pub fn verify_command (command: Command, config: config::Config)
 		       -> Result<String, String> {
     let commands =
@@ -51,6 +64,11 @@ pub fn verify_command (command: Command, config: config::Config)
     Ok(exec_path.unwrap())
 }
 
+/// Returns Path to config file
+///
+/// Searches for possible config files in the directory tree upwards, beginning from the directory
+/// the application is called from. The first config file that is found is used, but if more than 
+/// one config file exists per directory the application terminates and prints an error message.
 pub fn find_and_verify_config_files ()
 			    -> Result<path::PathBuf, &'static str> {
     let mut no_conf_files = 0;
